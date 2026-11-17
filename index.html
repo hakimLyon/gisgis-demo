@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gisgis – démonstration</title>
+  <meta name="description" content="Démo d'une plateforme qui réunit imagerie, plans et notes de terrain pour suivre des projets d'infrastructure au Sénégal.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="vendor/maplibre-gl/maplibre-gl.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app" data-view="home">
+    <div id="map-before" class="map" hidden></div>
+    <div id="map" class="map" aria-label="Carte"></div>
+
+    <div id="swipe" class="swipe" hidden>
+      <div class="swipe-line"></div>
+      <button id="swipe-handle" class="swipe-handle" type="button" aria-label="Déplacer la séparation entre les deux dates">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+      </button>
+      <div class="swipe-label swipe-label-left">
+        <label for="compare-date">Avant</label>
+        <select id="compare-date"></select>
+      </div>
+      <div class="swipe-label swipe-label-right">
+        <span>Après</span>
+        <strong id="compare-after"></strong>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <a class="brand" href="#" id="home-link" aria-label="Gisgis, retour à la liste des projets">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M3 16c3.6-6 8-9 13-9s9.4 3 13 9c-3.6 6-8 9-13 9S6.6 22 3 16z"/>
+          <circle cx="16" cy="16" r="5.2"/>
+          <circle cx="16" cy="16" r="1.6" class="brand-dot"/>
+        </svg>
+        <span>gisgis</span>
+      </a>
+      <div class="project-switch">
+        <button id="project-button" class="project-button" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="project-menu">
+          <span class="project-button-name" id="project-button-name">Tous les projets</span>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <div id="project-menu" class="project-menu" hidden></div>
+      </div>
+      <p class="demo-badge"><span class="demo-dot" aria-hidden="true"></span>Démo : plans et notes fictifs</p>
+    </header>
+
+    <div class="actions">
+      <button id="panel-toggle" class="action panel-toggle" type="button" aria-controls="panel" aria-expanded="true">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+        <span>Panneau</span>
+      </button>
+      <button id="share-button" class="action" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8.5 11.5a3.5 3.5 0 005 0l2.5-2.5a3.5 3.5 0 00-5-5l-1 1M11.5 8.5a3.5 3.5 0 00-5 0L4 11a3.5 3.5 0 005 5l1-1"/></svg>
+        <span>Copier le lien</span>
+      </button>
+      <button id="export-button" class="action" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5M4 14v2.5h12V14"/></svg>
+        <span>Exporter l'image</span>
+      </button>
+      <button id="sources-button" class="action" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5M10 6.2v.1"/></svg>
+        <span>Sources</span>
+      </button>
+    </div>
+
+    <aside id="panel" class="panel" aria-label="Panneau du projet"></aside>
+
+    <div id="gauge" class="gauge" hidden>
+      <div class="gauge-head">
+        <span>Niveau d'eau simulé</span>
+        <output id="gauge-value" for="staff">0 m</output>
+      </div>
+      <div class="gauge-body">
+        <div id="staff" class="staff" role="slider" tabindex="0" aria-label="Niveau d'eau simulé, en mètres d'altitude"
+             aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+          <svg id="staff-scale" class="staff-scale" aria-hidden="true"></svg>
+          <div id="staff-water" class="staff-water"></div>
+          <div id="staff-handle" class="staff-handle"><span></span></div>
+        </div>
+        <dl class="gauge-stats">
+          <div>
+            <dt>Bâtiments sous ce niveau</dt>
+            <dd id="stat-buildings">0</dd>
+          </div>
+          <div>
+            <dt>Surface sous ce niveau</dt>
+            <dd id="stat-area">0 ha</dd>
+          </div>
+        </dl>
+      </div>
+      <p class="gauge-note">Calcul dans la zone d'étude, sur un relief de 30 m de résolution (SRTM). Indicatif : ne remplace pas une étude hydraulique.</p>
+    </div>
+
+    <div class="bottom">
+      <div id="readout" class="readout" role="status" aria-live="polite" hidden></div>
+      <div id="timeline" class="timeline" role="radiogroup" aria-label="Date de l'image satellite" hidden></div>
+      <div id="toolbar" class="toolbar" role="toolbar" aria-label="Outils" hidden>
+        <button class="tool" type="button" data-tool="pan" aria-label="Naviguer" title="Naviguer" aria-pressed="true">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 10V4.5a1.5 1.5 0 013 0V9m0-4.5V3.5a1.5 1.5 0 013 0V9m0-3a1.5 1.5 0 013 0v5.5a6 6 0 01-6 6h-.7a5 5 0 01-3.9-1.9L3.3 13a1.5 1.5 0 012.3-1.9L7 12.5"/></svg>
+          <span>Naviguer</span>
+        </button>
+        <button class="tool" type="button" data-tool="distance" aria-label="Mesurer une distance" title="Mesurer une distance" aria-pressed="false">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 13.5l11-11 4 4-11 11z"/><path d="M6 10l1.5 1.5M8.5 7.5L10 9M11 5l1.5 1.5"/></svg>
+          <span>Distance</span>
+        </button>
+        <button class="tool" type="button" data-tool="area" aria-label="Mesurer une surface" title="Mesurer une surface" aria-pressed="false">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5l9-2 4 7-5 7-8-3z"/><circle cx="4" cy="5" r="1.2"/><circle cx="13" cy="3" r="1.2"/><circle cx="17" cy="10" r="1.2"/><circle cx="12" cy="17" r="1.2"/><circle cx="4" cy="14" r="1.2"/></svg>
+          <span>Surface</span>
+        </button>
+        <button class="tool" type="button" data-tool="note" aria-label="Ajouter une note" title="Ajouter une note" aria-pressed="false">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18s-5.5-5.2-5.5-9.5a5.5 5.5 0 0111 0C15.5 12.8 10 18 10 18z"/><path d="M10 6v5M7.5 8.5h5"/></svg>
+          <span>Note</span>
+        </button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <button id="compare-toggle" aria-label="Comparer deux dates" title="Comparer deux dates" class="tool" type="button" aria-pressed="false">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="1.5"/><path d="M10 2v16"/></svg>
+          <span>Comparer</span>
+        </button>
+        <button id="view3d-toggle" aria-label="Vue 3D" title="Vue 3D" class="tool" type="button" aria-pressed="false">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l7 4v7l-7 4-7-4v-7z"/><path d="M3 6.5l7 4 7-4M10 10.5v7"/></svg>
+          <span>3D</span>
+        </button>
+        <button id="flood-toggle" aria-label="Simuler une inondation" title="Simuler une inondation" class="tool" type="button" aria-pressed="false" hidden>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 8c2-1.5 4-1.5 6 0s4 1.5 6 0 3-1.2 4-.8M2 12.5c2-1.5 4-1.5 6 0s4 1.5 6 0 3-1.2 4-.8M2 17c2-1.5 4-1.5 6 0s4 1.5 6 0 3-1.2 4-.8"/></svg>
+          <span>Inondation</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <dialog id="note-dialog" class="dialog" aria-labelledby="note-dialog-title">
+      <form id="note-form" method="dialog">
+        <h2 id="note-dialog-title">Nouvelle note</h2>
+        <p class="dialog-hint" id="note-position"></p>
+        <label for="note-title">Titre</label>
+        <input id="note-title" name="title" required maxlength="80" autocomplete="off" placeholder="Ex. : Regard d'assainissement bouché">
+        <label for="note-category">Catégorie</label>
+        <select id="note-category" name="category"></select>
+        <label for="note-text">Détail</label>
+        <textarea id="note-text" name="text" rows="3" maxlength="500" placeholder="Ce que l'équipe doit savoir sur ce point"></textarea>
+        <div class="dialog-actions">
+          <button type="button" class="button-quiet" id="note-cancel">Annuler</button>
+          <button type="submit" class="button-strong">Ajouter la note</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="sources-dialog" class="dialog dialog-wide" aria-labelledby="sources-title">
+      <h2 id="sources-title">Sources et licences</h2>
+      <div id="sources-body"></div>
+      <div class="dialog-actions">
+        <button type="button" class="button-strong" id="sources-close">Fermer</button>
+      </div>
+    </dialog>
+  </div>
+
+  <script src="vendor/maplibre-gl/maplibre-gl.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
